@@ -1,0 +1,51 @@
+#!/bin/sh -eu
+
+function previous_status {
+  filename=$1
+  status=$(awk -F': ' '$1=="# Status" { print $2}' $filename)
+  if [ -n "$status" ]; then
+    return $status
+  else
+    return "NONE"
+  fi
+}
+
+function current_status {
+  filename=$1
+  status=$(git diff --cached $file | awk -F ': ' '$1=="^+# Status" { print $2 }')
+  if [ -n "$status" ]; then
+    return $status
+  else
+    return previous_status $filename
+  fi
+}
+
+function check_allowed_status {
+  filename=$1
+  if previous_status $file == "FINAL"; then
+    if current_status $file != "DEPRECATED"; then
+      echo "Playbook $file has status FINAL. "
+      echo "The only permitted modification is to make status DEPRECATED"
+      return 1
+    fi
+  fi
+  if previous_status $file == "DEPRECATED"; then
+    echo "File $file has status DEPRECATED"
+    echo "No changes are permitted to deprecated playbooks"
+    return 1
+  fi
+}
+
+
+for file in $(git diff --cached --name-only); do
+
+      exit 1
+    fi
+    if echo $file | grep -q '/roles/'; then
+        meta = $(echo $file | sed 's:/[^/]*/[^/]*.yml:/meta/main.yml:')
+        if [ -f "$meta" ] && status_was_and_is_final $meta; then
+            echo "Modifying a role with Status FINAL in $meta is not allowed"
+            exit 1
+        fi
+    fi
+done
